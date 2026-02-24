@@ -3,139 +3,335 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>XO Game - Single Page</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+    <title>Pro Tic-Tac-Toe</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
     <style>
-        @keyframes xDraw {
-            0% { clip-path: inset(0 0 100% 0); }
-            50% { clip-path: inset(0 0 0 0); }
-            100% { clip-path: inset(0 0 0 0); }
+        :root {
+            --bg-color: #1a1a1a;
+            --cell-size: 120px;
+            --x-color: #ff4d4d;
+            --o-color: #ffffff;
         }
-        @keyframes oDraw {
-            0% { clip-path: inset(100% 0 0 0); }
-            50% { clip-path: inset(0 0 0 0); }
-            100% { clip-path: inset(0 0 0 0); }
+
+        body {
+            background-color: var(--bg-color);
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden;
         }
-        @keyframes winPulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.2); }
+
+        /* Player Info Section */
+        .header {
+            width: 90%;
+            display: flex;
+            justify-content: space-between;
+            position: absolute;
+            top: 20px;
+            font-size: 1.5rem;
         }
-        @keyframes bounce {
-            0%, 20%, 53%, 80%, 100% { transform: translate3d(0,0,0); }
-            40%, 43% { transform: translate3d(0,-10px,0); }
-            70% { transform: translate3d(0,-5px,0); }
-            90% { transform: translate3d(0,-2px,0); }
+
+        .player-box {
+            padding: 15px;
+            border-radius: 10px;
+            background: #333;
+            transition: 0.3s;
+            min-width: 150px;
+            text-align: center;
         }
-        .x-symbol { color: #ef4444; font-size: 4.5rem; font-weight: bold; animation: xDraw 0.6s ease-in-out; }
-        .o-symbol { color: white; font-size: 4.5rem; font-weight: bold; animation: oDraw 0.6s ease-in-out; }
-        .board { max-width: 550px; height: 550px; }
-        .cell { height: calc(33.33% - 5px); border: 4px solid #333; transition: background 0.3s; }
-        .cell:hover { background: rgba(255,255,255,0.1); }
-        .winner-line { background: linear-gradient(90deg, #ffd700, #ff6b6b); animation: winPulse 1s infinite; }
-        .player-active { animation: bounce 1s infinite; }
-        .timer-warning { color: #ef4444; font-weight: bold; animation: bounce 0.5s infinite; }
-        .first-move-btn { width: 220px; height: 70px; font-size: 1.4rem; }
-        .start-restart-btn { width: 250px; height: 65px; font-size: 1.3rem; }
-        .name-input { width: 180px; height: 45px; font-size: 1.1rem; }
-        .first-selected { background: #10b981 !important; box-shadow: 0 0 20px #10b981; }
+
+        .active-p1 { border: 3px solid var(--x-color); box-shadow: 0 0 15px var(--x-color); }
+        .active-p2 { border: 3px solid var(--o-color); box-shadow: 0 0 15px var(--o-color); }
+
+        .timer { font-weight: bold; font-size: 2rem; display: block; }
+
+        /* Setup UI */
+        #setup {
+            position: absolute;
+            background: rgba(0,0,0,0.9);
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+
+        #setup input {
+            padding: 15px;
+            font-size: 1.2rem;
+            margin: 10px;
+            border-radius: 5px;
+            border: none;
+        }
+
+        /* Game Board */
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, var(--cell-size));
+            grid-template-rows: repeat(3, var(--cell-size));
+            gap: 15px;
+            margin-top: 50px;
+        }
+
+        .cell {
+            width: var(--cell-size);
+            height: var(--cell-size);
+            background: #2a2a2a;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, background 0.3s;
+        }
+
+        .cell:hover { background: #3a3a3a; }
+        .cell.x { color: var(--x-color); text-shadow: 0 0 10px var(--x-color); }
+        .cell.o { color: var(--o-color); text-shadow: 0 0 10px var(--o-color); }
+
+        /* Fade-out animation for 4th move rule */
+        .fading { opacity: 0.3; transform: scale(0.8); }
+
+        /* Buttons */
+        .controls {
+            margin-top: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            align-items: center;
+        }
+
+        button {
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            border-radius: 50px;
+            transition: 0.3s;
+        }
+
+        #start-btn { background: #27ae60; color: white; transform: scale(1.2); }
+        #restart-btn { background: #e67e22; color: white; }
+        #undo-btn { background: #3498db; color: white; }
+
+        button:hover { filter: brightness(1.2); transform: translateY(-3px); }
     </style>
 </head>
-<body class="bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 min-h-screen flex flex-col items-center justify-center p-6 text-white">
-    <audio id="tapSound" preload="auto">
-        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBqS0/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBqS0/" type="audio/wav">
-    </audio>
+<body>
 
-    <!-- SINGLE PAGE - All Elements Always Visible -->
-    <div class="w-full max-w-6xl mb-8">
-        <!-- Player Names and Timers (Top Bar) -->
-        <div class="flex justify-between items-center mb-6">
-            <div id="player1-info" class="text-left">
-                <input type="text" id="player1-name-input" class="name-input bg-gray-700 rounded-lg px-3 text-center font-bold mb-2" placeholder="Player 1" maxlength="10" value="Rahul">
-                <div id="player1-timer" class="text-xl font-mono">00:10</div>
-            </div>
-            <div id="player2-info" class="text-right">
-                <input type="text" id="player2-name-input" class="name-input bg-gray-700 rounded-lg px-3 text-center font-bold mb-2" placeholder="Player 2" maxlength="10" value="Priya">
-                <div id="player2-timer" class="text-xl font-mono">00:10</div>
-            </div>
+    <div id="setup">
+        <h1 style="font-size: 3rem;">XO Game Pro</h1>
+        <input type="text" id="p1-name" placeholder="Player 1 Name (X)">
+        <input type="text" id="p2-name" placeholder="Player 2 Name (O)">
+        <div style="margin: 20px;">
+            <span>First Move: </span>
+            <select id="first-move" style="padding: 10px; font-size: 1.2rem;">
+                <option value="X">Player 1 (X)</option>
+                <option value="O">Player 2 (O)</option>
+            </select>
         </div>
+        <button id="start-btn" onclick="startGame()">START GAME</button>
+    </div>
 
-        <!-- Status and Controls Row -->
-        <div class="flex flex-col lg:flex-row justify-between items-center mb-8 gap-4">
-            <div id="status" class="text-3xl font-bold text-center lg:text-left flex-1">Enter names and choose first player!</div>
-            
-            <div class="flex flex-wrap gap-3 justify-center lg:justify-end">
-                <!-- First Move Selection -->
-                <button id="player1-first" class="first-move-btn bg-red-500 hover:bg-red-600 rounded-xl shadow-xl font-bold">Player 1 First</button>
-                <button id="player2-first" class="first-move-btn bg-blue-500 hover:bg-blue-600 rounded-xl shadow-xl font-bold">Player 2 First</button>
-                
-                <!-- Game Controls -->
-                <button id="start-game" class="start-restart-btn bg-green-500 hover:bg-green-600 rounded-xl shadow-xl font-bold hidden">Start Game</button>
-                <button id="restart-game" class="start-restart-btn bg-red-500 hover:bg-red-600 rounded-xl shadow-xl font-bold hidden">Restart</button>
-            </div>
+    <div class="header">
+        <div id="p1-display" class="player-box">
+            <span id="p1-label">Player 1</span>
+            <div id="p1-timer" class="timer">10</div>
+        </div>
+        <div id="p2-display" class="player-box">
+            <span id="p2-label">Player 2</span>
+            <div id="p2-timer" class="timer">10</div>
         </div>
     </div>
 
-    <!-- Game Board -->
-    <div id="game-board" class="board grid grid-cols-3 gap-2 mb-12 bg-gray-800 p-10 rounded-3xl shadow-3xl">
-        <div class="cell flex items-center justify-center cursor-pointer bg-gray-700 rounded-xl hover:shadow-lg" data-index="0"></div>
-        <div class="cell flex items-center justify-center cursor-pointer bg-gray-700 rounded-xl hover:shadow-lg" data-index="1"></div>
-        <div class="cell flex items-center justify-center cursor-pointer bg-gray-700 rounded-xl hover:shadow-lg" data-index="2"></div>
-        <div class="cell flex items-center justify-center cursor-pointer bg-gray-700 rounded-xl hover:shadow-lg" data-index="3"></div>
-        <div class="cell flex items-center justify-center cursor-pointer bg-gray-700 rounded-xl hover:shadow-lg" data-index="4"></div>
-        <div class="cell flex items-center justify-center cursor-pointer bg-gray-700 rounded-xl hover:shadow-lg" data-index="5"></div>
-        <div class="cell flex items-center justify-center cursor-pointer bg-gray-700 rounded-xl hover:shadow-lg" data-index="6"></div>
-        <div class="cell flex items-center justify-center cursor-pointer bg-gray-700 rounded-xl hover:shadow-lg" data-index="7"></div>
-        <div class="cell flex items-center justify-center cursor-pointer bg-gray-700 rounded-xl hover:shadow-lg" data-index="8"></div>
+    <div class="board" id="board">
+        <div class="cell" onclick="handleTap(0)"></div>
+        <div class="cell" onclick="handleTap(1)"></div>
+        <div class="cell" onclick="handleTap(2)"></div>
+        <div class="cell" onclick="handleTap(3)"></div>
+        <div class="cell" onclick="handleTap(4)"></div>
+        <div class="cell" onclick="handleTap(5)"></div>
+        <div class="cell" onclick="handleTap(6)"></div>
+        <div class="cell" onclick="handleTap(7)"></div>
+        <div class="cell" onclick="handleTap(8)"></div>
     </div>
+
+    <div class="controls">
+        <button id="undo-btn" onclick="undoMove()">UNDO BACK</button>
+        <button id="restart-btn" onclick="resetGame()">RESTART GAME</button>
+    </div>
+
+    <audio id="tap-sound" src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3"></audio>
 
     <script>
-        class XOGame {
-            constructor() {
-                this.board = Array(9).fill(null);
-                this.currentPlayer = null;
-                this.firstPlayer = null;
-                this.gameActive = false;
-                this.moveNumber = 0;
-                this.currentTimer = null;
-                this.player1Name = 'Rahul';
-                this.player2Name = 'Priya';
-                this.xPositions = [];
-                this.oPositions = [];
-                this.init();
+        let currentPlayer = 'X';
+        let boardState = Array(9).fill(null);
+        let movesX = [];
+        let movesO = [];
+        let history = [];
+        let timer;
+        let timeLeft = 10;
+        let gameActive = false;
+
+        const tapSound = document.getElementById('tap-sound');
+
+        function startGame() {
+            const p1 = document.getElementById('p1-name').value || "Player 1";
+            const p2 = document.getElementById('p2-name').value || "Player 2";
+            currentPlayer = document.getElementById('first-move').value;
+            
+            document.getElementById('p1-label').innerText = p1;
+            document.getElementById('p2-label').innerText = p2;
+            document.getElementById('setup').style.display = 'none';
+            
+            gameActive = true;
+            resetGame();
+        }
+
+        function handleTap(index) {
+            if (!gameActive || boardState[index]) return;
+
+            // Play Sound
+            tapSound.currentTime = 0;
+            tapSound.play();
+
+            // Save History for Undo
+            history.push({
+                board: [...boardState],
+                movesX: [...movesX],
+                movesO: [...movesO],
+                player: currentPlayer
+            });
+
+            makeMove(index);
+        }
+
+        function makeMove(index) {
+            boardState[index] = currentPlayer;
+            
+            if (currentPlayer === 'X') {
+                movesX.push(index);
+                if (movesX.length > 3) {
+                    const removed = movesX.shift();
+                    boardState[removed] = null;
+                }
+            } else {
+                movesO.push(index);
+                if (movesO.length > 3) {
+                    const removed = movesO.shift();
+                    boardState[removed] = null;
+                }
             }
 
-            init() {
-                this.cells = document.querySelectorAll('.cell');
-                this.tapSound = document.getElementById('tapSound');
-                this.statusEl = document.getElementById('status');
-                
-                // Name inputs
-                const p1Input = document.getElementById('player1-name-input');
-                const p2Input = document.getElementById('player2-name-input');
-                p1Input.addEventListener('input', () => this.updatePlayerNames());
-                p2Input.addEventListener('input', () => this.updatePlayerNames());
-                
-                // First move selection
-                document.getElementById('player1-first').addEventListener('click', () => this.selectFirstPlayer(1));
-                document.getElementById('player2-first').addEventListener('click', () => this.selectFirstPlayer(2));
-                
-                // Game controls
-                document.getElementById('start-game').addEventListener('click', () => this.startGame());
-                document.getElementById('restart-game').addEventListener('click', () => this.restart());
-
-                this.cells.forEach(cell => cell.addEventListener('click', (e) => this.handleCellClick(e)));
-                this.updatePlayerNames(); // Initial names
+            updateUI();
+            if (checkWin()) {
+                endGame(currentPlayer === 'X' ? 'p1' : 'p2');
+            } else {
+                switchPlayer();
             }
+        }
 
-            updatePlayerNames() {
-                this.player1Name = document.getElementById('player1-name-input').value.trim() || 'Player 1';
-                this.player2Name = document.getElementById('player2-name-input').value.trim() || 'Player 2';
-            }
+        function switchPlayer() {
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            startTimer();
+            updateUI();
+        }
 
-            playSound() {
-                const audio = this.tapSound.cloneNode();
-                audio.play().catch(() => {});
+        function startTimer() {
+            clearInterval(timer);
+            timeLeft = 10;
+            updateTimerDisplay();
+            
+            timer = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay();
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    endGame(currentPlayer === 'X' ? 'p2' : 'p1'); // Opponent wins
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            document.getElementById('p1-timer').innerText = currentPlayer === 'X' ? timeLeft : "00";
+            document.getElementById('p2-timer').innerText = currentPlayer === 'O' ? timeLeft : "00";
+        }
+
+        function updateUI() {
+            const cells = document.querySelectorAll('.cell');
+            cells.forEach((cell, i) => {
+                cell.innerText = boardState[i] || '';
+                cell.className = 'cell' + (boardState[i] ? ' ' + boardState[i].toLowerCase() : '');
+                
+                // Highlight the one that will be removed next
+                if (currentPlayer === 'X' && movesX.length === 3 && movesX[0] === i) cell.classList.add('fading');
+                if (currentPlayer === 'O' && movesO.length === 3 && movesO[0] === i) cell.classList.add('fading');
+            });
+
+            document.getElementById('p1-display').className = 'player-box' + (currentPlayer === 'X' ? ' active-p1' : '');
+            document.getElementById('p2-display').className = 'player-box' + (currentPlayer === 'O' ? ' active-p2' : '');
+        }
+
+        function checkWin() {
+            const winPatterns = [
+                [0,1,2], [3,4,5], [6,7,8],
+                [0,3,6], [1,4,7], [2,5,8],
+                [0,4,8], [2,4,6]
+            ];
+            return winPatterns.some(pattern => {
+                return pattern.every(idx => boardState[idx] === currentPlayer);
+            });
+        }
+
+        function undoMove() {
+            if (history.length === 0 || !gameActive) return;
+            const lastState = history.pop();
+            boardState = lastState.board;
+            movesX = lastState.movesX;
+            movesO = lastState.movesO;
+            currentPlayer = lastState.player;
+            updateUI();
+            startTimer();
+        }
+
+        function endGame(winner) {
+            gameActive = false;
+            clearInterval(timer);
+            const winnerName = winner === 'p1' ? document.getElementById('p1-label').innerText : document.getElementById('p2-label').innerText;
+            
+            // Powerful Animation
+            confetti({
+                particleCount: 150,
+                spread: 70,
+                origin: { y: 0.6 },
+                colors: winner === 'p1' ? ['#ff4d4d', '#ffffff'] : ['#ffffff', '#3498db']
+            });
+
+            setTimeout(() => alert(winnerName + " WINS THE MATCH!"), 500);
+        }
+
+        function resetGame() {
+            boardState = Array(9).fill(null);
+            movesX = [];
+            movesO = [];
+            history = [];
+            gameActive = true;
+            updateUI();
+            startTimer();
+        }
+    </script>
+</body>
+</html>
             }
 
             selectFirstPlayer(playerNum) {
