@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>XO Game - Advanced Version</title>
+    <title>XO Game - Fixed Version</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
     <style>
@@ -38,6 +38,7 @@
         .first-move-btn { width: 250px; height: 90px; font-size: 1.8rem; }
         .start-restart-btn { width: 280px; height: 70px; font-size: 1.4rem; margin: 25px 0; }
         .name-input { width: 200px; height: 50px; font-size: 1.2rem; }
+        .first-selected { background: #10b981 !important; box-shadow: 0 0 20px #10b981; }
     </style>
 </head>
 <body class="bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 min-h-screen flex flex-col items-center justify-center p-4 text-white">
@@ -51,11 +52,11 @@
         <div class="flex justify-center space-x-8 mb-8">
             <div>
                 <label class="block text-xl mb-2">Player 1 (X):</label>
-                <input type="text" id="player1-name-input" class="name-input bg-gray-700 rounded-lg px-4 text-center font-bold" placeholder="Enter name" maxlength="10">
+                <input type="text" id="player1-name-input" class="name-input bg-gray-700 rounded-lg px-4 text-center font-bold" placeholder="Enter name" maxlength="10" value="Rahul">
             </div>
             <div>
                 <label class="block text-xl mb-2">Player 2 (O):</label>
-                <input type="text" id="player2-name-input" class="name-input bg-gray-700 rounded-lg px-4 text-center font-bold" placeholder="Enter name" maxlength="10">
+                <input type="text" id="player2-name-input" class="name-input bg-gray-700 rounded-lg px-4 text-center font-bold" placeholder="Enter name" maxlength="10" value="Priya">
             </div>
         </div>
         <button id="confirm-names" class="px-12 py-4 bg-green-500 hover:bg-green-600 rounded-xl text-xl font-bold shadow-xl">Confirm Names & Continue</button>
@@ -64,11 +65,11 @@
     <!-- Player Names and Timers -->
     <div id="player-info-section" class="w-full max-w-4xl flex justify-between mb-8 hidden">
         <div id="player1-info" class="text-left">
-            <h2 id="player1-name" class="text-3xl font-bold">Player 1 (X)</h2>
+            <h2 id="player1-name-display" class="text-3xl font-bold">Player 1 (X)</h2>
             <div id="player1-timer" class="text-2xl mt-2 font-mono">00:10</div>
         </div>
         <div id="player2-info" class="text-right">
-            <h2 id="player2-name" class="text-3xl font-bold">Player 2 (O)</h2>
+            <h2 id="player2-name-display" class="text-3xl font-bold">Player 2 (O)</h2>
             <div id="player2-timer" class="text-2xl mt-2 font-mono">00:10</div>
         </div>
     </div>
@@ -109,7 +110,256 @@
                 this.currentPlayer = null;
                 this.firstPlayer = null;
                 this.gameActive = false;
-                this.moveHistory = [];
+                this.moveNumber = 0;
+                this.currentTimer = null;
+                this.player1Name = 'Rahul';
+                this.player2Name = 'Priya';
+                this.xPositions = [];
+                this.oPositions = [];
+                this.init();
+            }
+
+            init() {
+                this.cells = document.querySelectorAll('.cell');
+                this.tapSound = document.getElementById('tapSound');
+                this.statusEl = document.getElementById('status');
+                this.gameBoard = document.getElementById('game-board');
+                this.controls = document.getElementById('controls');
+                this.firstMoveSelection = document.getElementById('first-move-selection');
+                this.playerInfoSection = document.getElementById('player-info-section');
+                this.nameInputSection = document.getElementById('name-input-section');
+                this.player1NameDisplay = document.getElementById('player1-name-display');
+                this.player2NameDisplay = document.getElementById('player2-name-display');
+                
+                // Name input events
+                document.getElementById('confirm-names').addEventListener('click', () => this.confirmNames());
+                
+                // First move selection events
+                document.getElementById('player1-first').addEventListener('click', () => this.selectFirstPlayer(1));
+                document.getElementById('player2-first').addEventListener('click', () => this.selectFirstPlayer(2));
+                
+                // Game control events
+                document.getElementById('start-game').addEventListener('click', () => this.startGame());
+                document.getElementById('restart-game').addEventListener('click', () => this.restart());
+
+                this.cells.forEach(cell => cell.addEventListener('click', (e) => this.handleCellClick(e)));
+            }
+
+            confirmNames() {
+                this.player1Name = document.getElementById('player1-name-input').value.trim() || 'Player 1';
+                this.player2Name = document.getElementById('player2-name-input').value.trim() || 'Player 2';
+                
+                // Show first letter with full name in parentheses
+                this.player1NameDisplay.textContent = this.player1Name.charAt(0).toUpperCase() + ' (' + this.player1Name + ')';
+                this.player2NameDisplay.textContent = this.player2Name.charAt(0).toUpperCase() + ' (' + this.player2Name + ')';
+                
+                this.nameInputSection.classList.add('hidden');
+                this.playerInfoSection.classList.remove('hidden');
+                this.statusEl.textContent = 'Choose who goes first!';
+                
+                // Show first move selection
+                setTimeout(() => {
+                    this.firstMoveSelection.classList.remove('hidden');
+                }, 500);
+            }
+
+            playSound() {
+                const audio = this.tapSound.cloneNode();
+                audio.play().catch(() => {});
+            }
+
+            selectFirstPlayer(playerNum) {
+                // Reset previous selection
+                document.getElementById('player1-first').classList.remove('first-selected');
+                document.getElementById('player2-first').classList.remove('first-selected');
+                
+                // Mark selected player
+                if (playerNum === 1) {
+                    document.getElementById('player1-first').classList.add('first-selected');
+                } else {
+                    document.getElementById('player2-first').classList.add('first-selected');
+                }
+                
+                this.firstPlayer = playerNum;
+                this.currentPlayer = playerNum;
+                
+                this.statusEl.textContent = `${this.player1Name.charAt(0)} or ${this.player2Name.charAt(0)} selected! Press Start Game`;
+                
+                // Show controls after 500ms
+                setTimeout(() => {
+                    this.controls.classList.remove('hidden');
+                }, 500);
+            }
+
+            startGame() {
+                if (!this.firstPlayer) {
+                    alert('Please choose who goes first!');
+                    return;
+                }
+                
+                this.gameActive = true;
+                this.board = Array(9).fill(null);
+                this.xPositions = [];
+                this.oPositions = [];
+                this.moveNumber = 0;
+                this.gameBoard.classList.remove('hidden');
+                this.updateBoard();
+                this.nextTurn();
+            }
+
+            handleCellClick(e) {
+                if (!this.gameActive || !this.currentPlayer) return;
+                const index = parseInt(e.target.dataset.index);
+                if (this.board[index]) return;
+
+                const symbol = this.currentPlayer === 1 ? 'X' : 'O';
+                this.board[index] = symbol;
+                
+                // Track positions and remove first one after 4th placement
+                if (symbol === 'X') {
+                    this.xPositions.push(index);
+                    if (this.xPositions.length > 3) {
+                        const removeIndex = this.xPositions.shift(); // Remove FIRST X
+                        this.board[removeIndex] = null;
+                        console.log(`4th X placed, removed first X at position ${removeIndex}`);
+                    }
+                } else {
+                    this.oPositions.push(index);
+                    if (this.oPositions.length > 3) {
+                        const removeIndex = this.oPositions.shift(); // Remove FIRST O
+                        this.board[removeIndex] = null;
+                        console.log(`4th O placed, removed first O at position ${removeIndex}`);
+                    }
+                }
+                
+                this.moveNumber++;
+                this.playSound();
+                this.updateBoard();
+                
+                const winner = this.checkWinner();
+                if (winner) {
+                    this.endGame(winner);
+                } else if (!this.board.includes(null)) {
+                    this.endGame('Draw');
+                } else {
+                    this.switchPlayer();
+                }
+            }
+
+            updateBoard() {
+                this.cells.forEach((cell, index) => {
+                    cell.innerHTML = '';
+                    if (this.board[index]) {
+                        const symbol = document.createElement('div');
+                        symbol.className = this.board[index] === 'X' ? 'x-symbol' : 'o-symbol';
+                        symbol.textContent = this.board[index];
+                        cell.appendChild(symbol);
+                    }
+                });
+            }
+
+            switchPlayer() {
+                this.currentPlayer = 3 - this.currentPlayer;
+                this.nextTurn();
+            }
+
+            nextTurn() {
+                this.startTimer();
+                document.getElementById('player1-info').classList.toggle('player-active', this.currentPlayer === 1);
+                document.getElementById('player2-info').classList.toggle('player-active', this.currentPlayer === 2);
+            }
+
+            startTimer() {
+                clearInterval(this.currentTimer);
+                const timeLimit = 10000; // 10 seconds
+                let timeLeft = timeLimit / 1000;
+                const playerTimer = document.getElementById(`player${this.currentPlayer}-timer`);
+                
+                this.currentTimer = setInterval(() => {
+                    timeLeft -= 0.1;
+                    const secs = Math.floor(timeLeft);
+                    playerTimer.textContent = `00:${secs.toString().padStart(2, '0')}`;
+                    
+                    if (timeLeft <= 3) {
+                        playerTimer.classList.add('timer-warning');
+                    }
+                    
+                    if (timeLeft <= 0) {
+                        clearInterval(this.currentTimer);
+                        const opponent = 3 - this.currentPlayer;
+                        const opponentName = opponent === 1 ? this.player1Name : this.player2Name;
+                        this.endGame(`${opponentName.charAt(0)} (${opponentName}) wins by timeout!`);
+                    }
+                }, 100);
+            }
+
+            checkWinner() {
+                const winConditions = [
+                    [0,1,2], [3,4,5], [6,7,8],
+                    [0,3,6], [1,4,7], [2,5,8],
+                    [0,4,8], [2,4,6]
+                ];
+                for (let condition of winConditions) {
+                    const [a, b, c] = condition;
+                    if (this.board[a] && this.board[a] === this.board[b] && this.board[a] === this.board[c]) {
+                        condition.forEach(i => this.cells[i].classList.add('winner-line'));
+                        return this.board[a];
+                    }
+                }
+                return null;
+            }
+
+            endGame(winner) {
+                this.gameActive = false;
+                clearInterval(this.currentTimer);
+                if (winner === 'Draw') {
+                    this.statusEl.textContent = 'Game Draw!';
+                } else if (typeof winner === 'string' && winner.includes('timeout')) {
+                    this.statusEl.textContent = winner;
+                    confetti({ particleCount: 100, spread: 70 });
+                } else {
+                    const playerNum = winner === 'X' ? 1 : 2;
+                    const playerName = playerNum === 1 ? this.player1Name : this.player2Name;
+                    this.statusEl.textContent = `${playerName.charAt(0)} (${playerName}) Wins! 🎉`;
+                    this.celebrateWin(playerNum);
+                }
+            }
+
+            celebrateWin(playerNum) {
+                confetti({
+                    particleCount: 150,
+                    spread: 70,
+                    origin: { y: 0.6 }
+                });
+                document.getElementById(`player${playerNum}-info`).style.transform = 'scale(1.3)';
+                setTimeout(() => {
+                    document.getElementById(`player${playerNum}-info`).style.transform = 'scale(1)';
+                }, 3000);
+            }
+
+            restart() {
+                this.gameActive = false;
+                clearInterval(this.currentTimer);
+                this.gameBoard.classList.add('hidden');
+                this.controls.classList.add('hidden');
+                this.firstMoveSelection.classList.remove('hidden');
+                document.querySelectorAll('.cell').forEach(cell => {
+                    cell.classList.remove('winner-line');
+                });
+                document.getElementById('player1-info').classList.remove('player-active');
+                document.getElementById('player2-info').classList.remove('player-active');
+                document.getElementById('player1-timer').textContent = '00:10';
+                document.getElementById('player2-timer').textContent = '00:10';
+                this.nameInputSection.classList.remove('hidden');
+                this.playerInfoSection.classList.add('hidden');
+                this.statusEl.textContent = 'Restarting... Enter names!';
+            }
+        }
+
+        const game = new XOGame();
+    </script>
+</body>
+</html>                this.moveHistory = [];
                 this.moveNumber = 0;
                 this.currentTimer = null;
                 this.player1Name = 'Player 1';
